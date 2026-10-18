@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Mail } from "lucide-react";
-import TrackedSection from "@/components/marketing/TrackedSection";
+import TrackedSection from "./TrackedSection";
 
 export default function Footer() {
   const [year, setYear] = useState(2026);
