@@ -34,20 +34,49 @@ export default function CookieBanner() {
     return () => window.clearTimeout(timer);
   }, []);
 
+  // Listen for clicks on footer/page triggers AND the custom "open-cookie-settings" event
   useEffect(() => {
-    function onReopen(event: MouseEvent) {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      if (target.id !== "dco-open-consent-footer" && !target.closest("#dco-open-consent-footer")) {
-        return;
+    function openBanner() {
+      // Load current saved state when reopening so toggles match what was previously saved
+      const saved = localStorage.getItem(CONSENT_STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved) as ConsentRecord;
+          setAnalyticsOn(parsed.analytics_storage === "granted");
+          setAdsOn(parsed.ad_storage === "granted");
+        } catch {
+          // fallback to defaults if parse fails
+        }
       }
-      event.preventDefault();
-      setPrefsOpen(false);
+      setPrefsOpen(true);
       setVisible(true);
     }
 
-    document.addEventListener("click", onReopen);
-    return () => document.removeEventListener("click", onReopen);
+    function onElementClick(event: MouseEvent) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      // Matches any trigger with id "dco-open-consent-footer" OR "open-cookie-preferences"
+      if (
+        target.id === "dco-open-consent-footer" ||
+        target.closest("#dco-open-consent-footer") ||
+        target.id === "open-cookie-preferences" ||
+        target.closest("#open-cookie-preferences")
+      ) {
+        event.preventDefault();
+        openBanner();
+      }
+    }
+
+    // 1. Listen for clicks on trigger elements
+    document.addEventListener("click", onElementClick);
+    // 2. Listen for programmatic custom events
+    window.addEventListener("open-cookie-settings", openBanner);
+
+    return () => {
+      document.removeEventListener("click", onElementClick);
+      window.removeEventListener("open-cookie-settings", openBanner);
+    };
   }, []);
 
   function saveAndClose(analytics: ConsentValue, ads: ConsentValue) {
@@ -140,7 +169,7 @@ export default function CookieBanner() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              className="inline-flex items-center justify-center rounded-full border border-dco-border bg-dco-border px-4 py-2 text-sm font-medium text-white"
+              className="inline-flex items-center justify-center rounded-full border border-dco-border bg-dco-border px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 cursor-pointer transition"
               onClick={() =>
                 saveAndClose(
                   analyticsOn ? "granted" : "denied",
@@ -155,21 +184,21 @@ export default function CookieBanner() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              className="inline-flex items-center justify-center rounded-full border border-dco-primary bg-dco-primary px-4 py-2 text-sm font-medium text-white hover:border-dco-primary-hover hover:bg-dco-primary-hover"
+              className="inline-flex items-center justify-center rounded-full border border-dco-primary bg-dco-primary px-4 py-2 text-sm font-medium text-white hover:border-dco-primary-hover hover:bg-dco-primary-hover cursor-pointer transition"
               onClick={() => saveAndClose("granted", "granted")}
             >
               Accept All
             </button>
             <button
               type="button"
-              className="inline-flex items-center justify-center rounded-full border border-dco-border bg-transparent px-4 py-2 text-sm font-medium text-dco-text hover:border-dco-muted"
+              className="inline-flex items-center justify-center rounded-full border border-dco-border bg-transparent px-4 py-2 text-sm font-medium text-dco-text hover:border-dco-muted cursor-pointer transition"
               onClick={() => saveAndClose("denied", "denied")}
             >
               Reject All
             </button>
             <button
               type="button"
-              className="inline-flex items-center justify-center border-0 bg-transparent p-2 text-sm font-medium text-dco-muted hover:text-white"
+              className="inline-flex items-center justify-center border-0 bg-transparent p-2 text-sm font-medium text-dco-muted hover:text-white cursor-pointer transition"
               onClick={() => setPrefsOpen(true)}
             >
               Configure
